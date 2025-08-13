@@ -1,40 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PWA Video Demo with Resume & Offline Support</title>
-  <link rel="manifest" href="manifest.json">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PWA Video Demo (Offline + Resume)</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <h1>PWA Video Player with Resume & Offline</h1>
+  <h1>PWA Video (Offline & Resume)</h1>
 
-  <video id="myVideo" width="640" height="360" controls>
-    <source src="soorajDobaHai.mp4" type="video/mp4">
+  <div id="net" class="status">Detecting network…</div>
+  <div class="hint">First open online so the video gets cached. After that, you can watch offline.</div>
+
+  <video id="player" width="720" height="405" controls playsinline>
+    <source src="./video.mp4" type="video/mp4" />
     Your browser does not support HTML5 video.
   </video>
 
+  <p class="hint">Your watch position is saved locally and restored automatically, even after days.</p>
+
+  <script src="./app.js"></script>
   <script>
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('✅ Service Worker Registered'))
-        .catch(err => console.error('❌ SW Registration Failed:', err));
+    // --- Request persistent storage (helps retain cached video longer) ---
+    (async () => {
+      if (navigator.storage && navigator.storage.persist) {
+        const persisted = await navigator.storage.persisted();
+        if (!persisted) {
+          await navigator.storage.persist().catch(() => {});
+        }
+      }
+    })();
+
+    // --- Simple online/offline indicator ---
+    const net = document.getElementById('net');
+    function updateNet() {
+      if (navigator.onLine) {
+        net.textContent = 'Online';
+        net.className = 'status online';
+      } else {
+        net.textContent = 'Offline (using cache if available)';
+        net.className = 'status offline';
+      }
     }
+    window.addEventListener('online',  updateNet);
+    window.addEventListener('offline', updateNet);
+    updateNet();
 
-    const video = document.getElementById('myVideo');
+    // --- Save & restore playback position ---
+    const video = document.getElementById('player');
+    const KEY = 'pwa-video-last-time';
 
-    // Save playback position periodically
-    video.addEventListener('timeupdate', () => {
-      localStorage.setItem('lastTime', video.currentTime);
+    // Restore on load (after metadata so duration is known)
+    video.addEventListener('loadedmetadata', () => {
+      const last = localStorage.getItem(KEY);
+      if (last) {
+        const t = parseFloat(last);
+        if (!Number.isNaN(t) && t < video.duration) {
+          video.currentTime = t;
+        }
+      }
     });
 
-    // Resume playback when page loads
-    window.addEventListener('load', () => {
-      const lastTime = localStorage.getItem('lastTime');
-      if (lastTime) {
-        video.currentTime = parseFloat(lastTime);
+    // Save periodically
+    let lastSaved = 0;
+    video.addEventListener('timeupdate', () => {
+      const t = Math.floor(video.currentTime);
+      // Save once per second to reduce writes
+      if (t !== lastSaved) {
+        lastSaved = t;
+        localStorage.setItem(KEY, String(t));
       }
+    });
+
+    // Save when pausing or leaving
+    ['pause', 'ended', 'suspend', 'stalled'].forEach(ev => {
+      video.addEventListener(ev, () => {
+        localStorage.setItem(KEY, String(Math.floor(video.currentTime)));
+      });
+    });
+    window.addEventListener('beforeunload', () => {
+      localStorage.setItem(KEY, String(Math.floor(video.currentTime)));
     });
   </script>
 </body>

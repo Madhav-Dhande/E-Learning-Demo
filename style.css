@@ -6,3 +6,20 @@ body {
 h1 {
   color: #2b7a78;
 }
+.status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.online {
+  background: #e6ffed;
+}
+.offline {
+  background: #fff5e6;
+}
+.hint {
+  color: #555;
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
