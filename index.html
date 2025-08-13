@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PWA Video Demo with Resume & Offline Support</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <h1>PWA Video Player with Resume & Offline</h1>
+
+  <video id="myVideo" width="640" height="360" controls>
+    <source src="soorajDobaHai.mp4" type="video/mp4">
+    Your browser does not support HTML5 video.
+  </video>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('✅ Service Worker Registered'))
+        .catch(err => console.error('❌ SW Registration Failed:', err));
+    }
+
+    const video = document.getElementById('myVideo');
+
+    // Save playback position periodically
+    video.addEventListener('timeupdate', () => {
+      localStorage.setItem('lastTime', video.currentTime);
+    });
+
+    // Resume playback when page loads
+    window.addEventListener('load', () => {
+      const lastTime = localStorage.getItem('lastTime');
+      if (lastTime) {
+        video.currentTime = parseFloat(lastTime);
+      }
+    });
+  </script>
+</body>
+</html>
